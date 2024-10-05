@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - rabbitmq
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/stockmarket
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672//
+
+  celery_worker:
+    build: .
+    command: celery -A app.tasks.celery_app worker --loglevel=info
+    depends_on:
+      - rabbitmq
+      - db
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/stockmarket
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672//
+
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=stockmarket
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
+  grafana_data:
